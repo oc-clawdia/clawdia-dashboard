@@ -202,7 +202,7 @@ function updatePortfolioSection() {
     const wallet = dashboardData.wallet;
     
     // Update balance values
-    document.getElementById('total-balance').textContent = formatCurrency(wallet.total_balance_usd);
+    document.getElementById('total-balance').textContent = formatCurrency(wallet.total_usd || wallet.total_balance_usd || 0);
     document.getElementById('sol-balance').textContent = `${formatNumber(wallet.sol_balance)} SOL`;
     document.getElementById('usdc-balance').textContent = formatCurrency(wallet.usdc_balance);
     document.getElementById('wbtc-balance').textContent = `${formatNumber(wallet.wbtc_balance, 6)} WBTC`;
@@ -219,9 +219,10 @@ function updatePortfolioSection() {
     }
     
     // Update last updated timestamp
-    if (wallet.last_updated) {
+    const ts = wallet.timestamp || wallet.last_updated;
+    if (ts) {
         document.getElementById('last-updated').textContent = 
-            `最終更新: ${formatDateTime(wallet.last_updated)}`;
+            `最終更新: ${formatDateTime(ts)}`;
     }
 }
 
@@ -733,7 +734,7 @@ function updateDailyReportsSection() {
                 <div class="toggle-icon">▼</div>
             </div>
             <div class="report-content" id="report-${report.date}">
-                ${report.content || '詳細情報なし'}
+                ${simpleMarkdown(report.content || '詳細情報なし')}
             </div>
         </div>
     `).join('');
@@ -883,12 +884,22 @@ function setupSignalChart() {
             },
             scales: {
                 x: {
-                    ticks: { color: '#888888' },
+                    ticks: { color: '#888888', maxTicksLimit: 12 },
                     grid: { color: '#333333' }
                 },
                 y: {
-                    ticks: { color: '#888888' },
+                    type: 'linear',
+                    position: 'left',
+                    title: { display: true, text: 'CCI', color: '#4488ff' },
+                    ticks: { color: '#4488ff' },
                     grid: { color: '#333333' }
+                },
+                y1: {
+                    type: 'linear',
+                    position: 'right',
+                    title: { display: true, text: 'BTC Price', color: '#ffaa00' },
+                    ticks: { color: '#ffaa00' },
+                    grid: { drawOnChartArea: false }
                 }
             }
         }
@@ -928,18 +939,29 @@ function prepareChartData(period) {
     }
     
     const filteredSignals = dashboardData.signals.filter(signal => 
-        new Date(signal.timestamp) >= cutoffDate
+        new Date(signal.checked_at || signal.timestamp) >= cutoffDate
     );
     
     return {
-        labels: filteredSignals.map(signal => formatTime(signal.timestamp)),
-        datasets: [{
-            label: 'BTC価格',
-            data: filteredSignals.map(signal => signal.btc_price || 0),
-            borderColor: '#4488ff',
-            backgroundColor: 'rgba(68, 136, 255, 0.1)',
-            fill: true
-        }]
+        labels: filteredSignals.map(signal => formatTime(signal.checked_at || signal.timestamp)),
+        datasets: [
+            {
+                label: 'CCI',
+                data: filteredSignals.map(signal => signal.cci || 0),
+                borderColor: '#4488ff',
+                backgroundColor: 'rgba(68, 136, 255, 0.1)',
+                fill: false,
+                yAxisID: 'y'
+            },
+            {
+                label: 'BTC価格',
+                data: filteredSignals.map(signal => signal.btc_price || signal.price || 0),
+                borderColor: '#ffaa00',
+                backgroundColor: 'rgba(255, 170, 0, 0.1)',
+                fill: false,
+                yAxisID: 'y1'
+            }
+        ]
     };
 }
 
@@ -1115,4 +1137,18 @@ function escapeHtml(text) {
     const div = document.createElement('div');
     div.textContent = text;
     return div.innerHTML;
+}
+
+function simpleMarkdown(text) {
+    if (!text) return '';
+    return text
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+        .replace(/^### (.+)$/gm, '<h4>$1</h4>')
+        .replace(/^## (.+)$/gm, '<h3>$1</h3>')
+        .replace(/^# (.+)$/gm, '<h2>$1</h2>')
+        .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+        .replace(/^- (.+)$/gm, '<li>$1</li>')
+        .replace(/(<li>.*<\/li>)/gs, '<ul>$1</ul>')
+        .replace(/\n\n/g, '<br><br>')
+        .replace(/\n/g, '<br>');
 }
