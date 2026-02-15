@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="robots" content="noindex, nofollow">
-    <title>Clawdia Trading Dashboard</title>
+    <title>Clawdia Trading Dashboard - Demo</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link rel="stylesheet" href="styles.css">
 </head>
@@ -86,8 +86,31 @@
                 <div class="loading">データ読み込み中...</div>
             </div>
         </section>
+
+        <!-- GitHub Link -->
+        <section class="card" style="text-align: center; background: var(--bg-secondary); border: 1px solid var(--accent-blue);">
+            <h2>🚀 完全版を見る</h2>
+            <p style="color: var(--text-secondary); margin-bottom: 15px;">
+                この Demo は一部機能が制限されています。<br>
+                完全版はNetlifyで環境変数を設定してデプロイしてください。
+            </p>
+            <div style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
+                <a href="https://github.com/oc-clawdia/clawdia-dashboard" 
+                   target="_blank" class="link-button" style="background: var(--accent-blue);">
+                    📂 GitHub Repository
+                </a>
+                <a href="https://docs.netlify.com/functions/deploy/" 
+                   target="_blank" class="link-button">
+                    📖 Netlify Functions Setup
+                </a>
+                <a href="https://docs.google.com/document/d/10NyFE-AdHMxFcDU1Y2godseURs7PFAfMYw_BgTsz5Hg/edit" 
+                   target="_blank" class="link-button">
+                    📋 Project Documentation
+                </a>
+            </div>
+        </section>
     </div>
 
-    <script src="dashboard.js"></script>
+    <script src="demo-dashboard.js"></script>
 </body>
 </html>
