@@ -3,6 +3,8 @@ let dashboardData = {
     trades: [],
     signals: [],
     wallet: null,
+    tasks: [],
+    dailyReports: [],
     filteredTrades: []
 };
 
@@ -37,11 +39,15 @@ async function loadAllData() {
         await Promise.all([
             loadWalletData(),
             loadTradesData(),
-            loadSignalsData()
+            loadSignalsData(),
+            loadTasksData(),
+            loadDailyReportsData()
         ]);
         
         // Update UI with loaded data
         updatePortfolioSection();
+        updateTasksSection();
+        updateDailyReportsSection();
         updatePnLSummary();
         applyFilters();
         updateSignalStatus();
@@ -96,6 +102,30 @@ async function loadSignalsData() {
     }
 }
 
+async function loadTasksData() {
+    try {
+        const response = await fetch('./data/tasks.json');
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        dashboardData.tasks = await response.json();
+        console.log(`✅ ${dashboardData.tasks.length} tasks loaded`);
+    } catch (error) {
+        console.error('Failed to load tasks data:', error);
+        dashboardData.tasks = [];
+    }
+}
+
+async function loadDailyReportsData() {
+    try {
+        const response = await fetch('./data/daily_reports.json');
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        dashboardData.dailyReports = await response.json();
+        console.log(`✅ ${dashboardData.dailyReports.length} daily reports loaded`);
+    } catch (error) {
+        console.error('Failed to load daily reports data:', error);
+        dashboardData.dailyReports = [];
+    }
+}
+
 // UI Update functions
 function updatePortfolioSection() {
     if (!dashboardData.wallet) return;
@@ -106,7 +136,15 @@ function updatePortfolioSection() {
     document.getElementById('sol-balance').textContent = `${(wallet.sol_balance || 0).toFixed(4)} SOL`;
     document.getElementById('usdc-balance').textContent = formatCurrency(wallet.usdc_balance || 0);
     document.getElementById('wbtc-balance').textContent = `${(wallet.wbtc_balance || 0).toFixed(8)} WBTC ($${(wallet.wbtc_value_usd || 0).toFixed(2)})`;
-    document.getElementById('bnb-balance').textContent = `${(wallet.bnb_balance || 0).toFixed(6)} BNB ($${(wallet.bnb_value_usd || 0).toFixed(2)})`;
+    // Hide BNB balance if 0
+    const bnbBalanceElement = document.getElementById('bnb-balance');
+    const bnbBalance = wallet.bnb_balance || 0;
+    if (bnbBalance > 0) {
+        bnbBalanceElement.textContent = `${bnbBalance.toFixed(6)} BNB ($${(wallet.bnb_value_usd || 0).toFixed(2)})`;
+        bnbBalanceElement.parentElement.style.display = 'block';
+    } else {
+        bnbBalanceElement.parentElement.style.display = 'none';
+    }
     document.getElementById('sol-price').textContent = formatCurrency(wallet.sol_price_usd || 0);
     
     if (wallet.timestamp) {
@@ -118,7 +156,7 @@ function updatePortfolioSection() {
 function updatePnLSummary() {
     const trades = dashboardData.filteredTrades.length > 0 ? dashboardData.filteredTrades : dashboardData.trades;
     const totalTrades = trades.length;
-    const successfulTrades = trades.filter(t => t.status === 'success').length;
+    const successfulTrades = trades.filter(t => t.status === 'Success').length;
     const successRate = totalTrades > 0 ? (successfulTrades / totalTrades * 100).toFixed(1) : '0';
     const totalFees = trades.reduce((sum, t) => sum + (parseFloat(t.fee_sol) || 0), 0);
     
@@ -144,13 +182,24 @@ function updateTradeTable() {
         const pair = `${trade.input_token || 'SOL'} → ${trade.output_token || 'USDC'}`;
         const amount = trade.input_amount ? `${parseFloat(trade.input_amount).toFixed(4)}` : '-';
         
+        // Calculate P&L if possible
+        let pnlInfo = '';
+        if (dashboardData.wallet && trade.output_token === 'WBTC' && trade.output_amount) {
+            const currentWBTCValue = parseFloat(trade.output_amount) * dashboardData.wallet.btc_price_usd;
+            const originalUSDCValue = parseFloat(trade.input_amount) || 0;
+            const pnl = currentWBTCValue - originalUSDCValue;
+            const pnlPercent = originalUSDCValue > 0 ? ((pnl / originalUSDCValue) * 100).toFixed(2) : 0;
+            const pnlClass = pnl >= 0 ? 'positive' : 'negative';
+            pnlInfo = `<br><small class="pnl ${pnlClass}">P&L: ${formatCurrency(pnl)} (${pnlPercent}%)</small>`;
+        }
+        
         return `
             <tr>
                 <td>${formatDateTime(trade.timestamp)}</td>
                 <td><span class="token-pair">${pair}</span></td>
                 <td><span class="trade-type">${trade.swap_type || 'swap'}</span></td>
-                <td>${amount}</td>
-                <td><span class="trade-status ${trade.status || 'unknown'}">${getStatusText(trade.status)}</span></td>
+                <td>${amount}${pnlInfo}</td>
+                <td><span class="trade-status ${trade.status || 'unknown'}">${getTradeStatusText(trade.status)}</span></td>
             </tr>
         `;
     }).join('');
@@ -173,10 +222,16 @@ function updateSignalStatus() {
         return;
     }
     
+    // Use wallet BTC price instead of signal btc_price (which might be incorrect)
+    const btcPrice = dashboardData.wallet ? dashboardData.wallet.btc_price_usd : (latestSignal.btc_price || 0);
+    
+    // Check if in position based on WBTC balance
+    const inPosition = dashboardData.wallet && dashboardData.wallet.wbtc_balance > 0;
+    
     container.innerHTML = `
         <div class="signal-item">
             <span class="signal-label">BTC価格</span>
-            <span class="signal-value">${formatCurrency(latestSignal.btc_price || 0)}</span>
+            <span class="signal-value">${formatCurrency(btcPrice)}</span>
         </div>
         <div class="signal-item">
             <span class="signal-label">CCI値</span>
@@ -184,7 +239,7 @@ function updateSignalStatus() {
         </div>
         <div class="signal-item">
             <span class="signal-label">ポジション</span>
-            <span class="signal-value ${latestSignal.in_position ? 'positive' : 'neutral'}">${latestSignal.in_position ? 'IN' : 'OUT'}</span>
+            <span class="signal-value ${inPosition ? 'positive' : 'neutral'}">${inPosition ? 'IN' : 'OUT'}</span>
         </div>
         <div class="signal-item">
             <span class="signal-label">最新アクション</span>
@@ -195,6 +250,117 @@ function updateSignalStatus() {
             <span class="signal-value">${formatDateTime(latestSignal.checked_at)}</span>
         </div>
     `;
+}
+
+function updateTasksSection() {
+    const container = document.getElementById('tasks-container');
+    
+    if (dashboardData.tasks.length === 0) {
+        container.innerHTML = '<div class="loading">タスクデータがありません</div>';
+        return;
+    }
+    
+    // Group by assignee
+    const tasksByAssignee = dashboardData.tasks.reduce((groups, task) => {
+        const assignee = task.assignee || 'unknown';
+        if (!groups[assignee]) groups[assignee] = [];
+        groups[assignee].push(task);
+        return groups;
+    }, {});
+    
+    // Calculate overall progress
+    const completedTasks = dashboardData.tasks.filter(t => t.status === 'completed').length;
+    const totalTasks = dashboardData.tasks.length;
+    const progressPercent = totalTasks > 0 ? ((completedTasks / totalTasks) * 100).toFixed(1) : 0;
+    
+    let html = `
+        <div class="progress-overview">
+            <div class="progress-bar-container">
+                <div class="progress-bar" style="width: ${progressPercent}%"></div>
+                <span class="progress-text">${completedTasks}/${totalTasks} 完了 (${progressPercent}%)</span>
+            </div>
+        </div>
+    `;
+    
+    // Assignee emojis
+    const assigneeEmojis = {
+        'clawdia': '🩶',
+        'talon': '🦅', 
+        'velvet': '🌙'
+    };
+    
+    Object.keys(tasksByAssignee).forEach(assignee => {
+        const emoji = assigneeEmojis[assignee] || '👤';
+        const tasks = tasksByAssignee[assignee];
+        
+        html += `
+            <div class="assignee-group">
+                <h4 class="assignee-title">${assignee.charAt(0).toUpperCase() + assignee.slice(1)} ${emoji}</h4>
+                <div class="tasks-grid">
+        `;
+        
+        tasks.forEach(task => {
+            const statusClass = getStatusClass(task.status);
+            const priorityClass = getPriorityClass(task.priority);
+            const estimatedHours = task.estimated_hours ? `見積: ${task.estimated_hours}h` : '見積: -';
+            const actualHours = task.actual_hours ? `実績: ${task.actual_hours}h` : '';
+            
+            html += `
+                <div class="task-card">
+                    <div class="task-header">
+                        <h5 class="task-title">${task.title}</h5>
+                        <div class="task-badges">
+                            <span class="status-badge ${statusClass}">${getStatusText(task.status)}</span>
+                            <span class="priority-badge ${priorityClass}">${task.priority}</span>
+                        </div>
+                    </div>
+                    <p class="task-description">${task.description || ''}</p>
+                    <div class="task-meta">
+                        <small class="task-hours">${estimatedHours} ${actualHours}</small>
+                        <small class="task-date">${formatDate(task.created_at)}</small>
+                    </div>
+                </div>
+            `;
+        });
+        
+        html += `
+                </div>
+            </div>
+        `;
+    });
+    
+    container.innerHTML = html;
+}
+
+function updateDailyReportsSection() {
+    const container = document.getElementById('daily-reports-container');
+    
+    if (dashboardData.dailyReports.length === 0) {
+        container.innerHTML = '<div class="loading">日報データがありません</div>';
+        return;
+    }
+    
+    // Sort by date (newest first)
+    const sortedReports = [...dashboardData.dailyReports].sort((a, b) => new Date(b.date) - new Date(a.date));
+    
+    let html = '';
+    sortedReports.forEach((report, index) => {
+        const isExpanded = index === 0; // Latest report is expanded by default
+        
+        html += `
+            <div class="report-accordion">
+                <div class="report-header" onclick="toggleReport('report-${index}')">
+                    <h4>${formatDate(report.date)}</h4>
+                    <span class="expand-icon ${isExpanded ? 'expanded' : ''}">${isExpanded ? '−' : '+'}</span>
+                </div>
+                <div class="report-content ${isExpanded ? 'expanded' : ''}" id="report-${index}">
+                    ${markdownToHtml(report.content)}
+                </div>
+            </div>
+        `;
+    });
+    
+    container.innerHTML = html;
 }
 
 function setupSignalChart() {
@@ -244,7 +410,11 @@ function setupSignalChart() {
             },
             scales: {
                 x: {
-                    ticks: { color: '#888888' },
+                    ticks: { 
+                        color: '#888888',
+                        maxTicksLimit: 10,
+                        maxRotation: 45
+                    },
                     grid: { color: 'rgba(255, 255, 255, 0.1)' }
                 },
                 y: {
@@ -381,6 +551,80 @@ function updateSignalChart(days) {
     signalChart.update();
 }
 
+// New utility functions for tasks and reports
+function getStatusClass(status) {
+    const statusMap = {
+        'pending': 'status-pending',
+        'in_progress': 'status-in-progress', 
+        'completed': 'status-completed',
+        'blocked': 'status-blocked'
+    };
+    return statusMap[status] || 'status-unknown';
+}
+
+function getPriorityClass(priority) {
+    const priorityMap = {
+        'high': 'priority-high',
+        'medium': 'priority-medium',
+        'low': 'priority-low'
+    };
+    return priorityMap[priority] || 'priority-unknown';
+}
+
+function getStatusText(status) {
+    const statusMap = {
+        'pending': '保留',
+        'in_progress': '進行中',
+        'completed': '完了',
+        'blocked': '待機'
+    };
+    return statusMap[status] || status || '不明';
+}
+
+function formatDate(dateStr) {
+    if (!dateStr) return '-';
+    const date = new Date(dateStr);
+    if (isNaN(date.getTime())) return dateStr;
+    
+    return date.toLocaleDateString('ja-JP', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit'
+    });
+}
+
+function markdownToHtml(markdown) {
+    if (!markdown) return '';
+    
+    return markdown
+        // Headers
+        .replace(/^### (.*$)/gim, '<h3>$1</h3>')
+        .replace(/^## (.*$)/gim, '<h2>$1</h2>')
+        .replace(/^# (.*$)/gim, '<h1>$1</h1>')
+        // Bold
+        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+        // Lists
+        .replace(/^\- (.*$)/gim, '<li>$1</li>')
+        .replace(/(<li>.*<\/li>)/s, '<ul>$1</ul>')
+        // Line breaks
+        .replace(/\n/g, '<br>');
+}
+
+function toggleReport(reportId) {
+    const content = document.getElementById(reportId);
+    const icon = content.previousElementSibling.querySelector('.expand-icon');
+    
+    if (content.classList.contains('expanded')) {
+        content.classList.remove('expanded');
+        icon.classList.remove('expanded');
+        icon.textContent = '+';
+    } else {
+        content.classList.add('expanded');
+        icon.classList.add('expanded');
+        icon.textContent = '−';
+    }
+}
+
 // Utility functions
 function getSignalChartData(days) {
     const cutoff = new Date(Date.now() - (days * 24 * 60 * 60 * 1000));
@@ -484,6 +728,16 @@ function getStatusText(status) {
         'failed': '失敗',
         'error': 'エラー',
         'pending': '処理中'
+    };
+    return statusMap[status] || status || '不明';
+}
+
+function getTradeStatusText(status) {
+    const statusMap = {
+        'Success': '成功',
+        'Failed': '失敗',
+        'Error': 'エラー',
+        'Pending': '処理中'
     };
     return statusMap[status] || status || '不明';
 }

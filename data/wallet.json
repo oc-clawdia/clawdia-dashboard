@@ -1,16 +1,16 @@
 {
-  "timestamp": "2026-02-15T11:28:23.544750",
+  "timestamp": "2026-02-15T11:41:35.861296",
   "wallet_address": "CdJSUeHX49eFK8hixbfDKNRLTakYcy59MbVEh8pDnn9U",
   "sol_balance": 0.085100463,
   "usdc_balance": 480.97533,
   "wbtc_balance": 0.00028823,
   "bnb_balance": 0,
   "other_tokens": [],
-  "sol_price_usd": 87.9,
-  "btc_price_usd": 69436,
-  "bnb_price_usd": 629.42,
-  "sol_value_usd": 7.4803306977,
-  "wbtc_value_usd": 20.01353828,
+  "sol_price_usd": 87.8,
+  "btc_price_usd": 69491,
+  "bnb_price_usd": 629.59,
+  "sol_value_usd": 7.4718206514,
+  "wbtc_value_usd": 20.029390929999998,
   "bnb_value_usd": 0.0,
-  "total_usd": 508.4691989777
+  "total_usd": 508.47654158139994
 }

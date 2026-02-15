@@ -9,6 +9,7 @@ import glob
 from datetime import datetime, timedelta
 import requests
 import time
+import re
 
 # Configuration
 CONFIG = {
@@ -238,6 +239,78 @@ def update_wallet_data():
     
     return wallet_data
 
+def update_tasks_data():
+    """タスクデータを更新"""
+    print("Updating tasks data...")
+    
+    tasks_file = '../tasks.json'  # ワークスペースルートのtasks.json
+    
+    tasks = []
+    try:
+        if os.path.exists(tasks_file):
+            with open(tasks_file, 'r', encoding='utf-8') as f:
+                tasks = json.load(f)
+        else:
+            print(f"Tasks file not found: {tasks_file}")
+    except Exception as e:
+        print(f"Error reading tasks file: {e}")
+    
+    output_path = os.path.join(CONFIG['OUTPUT_DIR'], 'tasks.json')
+    with open(output_path, 'w', encoding='utf-8') as f:
+        json.dump(tasks, f, ensure_ascii=False, indent=2)
+    
+    print(f"Saved {len(tasks)} tasks to {output_path}")
+    return tasks
+
+def update_daily_reports_data():
+    """日報データを更新"""
+    print("Updating daily reports data...")
+    
+    memory_dir = '../memory'  # ワークスペースルートのmemoryディレクトリ
+    reports = []
+    
+    try:
+        if os.path.exists(memory_dir):
+            # memory/YYYY-MM-DD.mdファイルを探す
+            pattern = os.path.join(memory_dir, '????-??-??.md')
+            files = glob.glob(pattern)
+            files.sort(reverse=True)  # 新しい日付から
+            
+            for file_path in files:
+                try:
+                    filename = os.path.basename(file_path)
+                    date_str = filename.replace('.md', '')
+                    
+                    # 日付の妥当性チェック
+                    try:
+                        datetime.strptime(date_str, '%Y-%m-%d')
+                    except ValueError:
+                        continue
+                    
+                    with open(file_path, 'r', encoding='utf-8') as f:
+                        content = f.read().strip()
+                    
+                    if content:  # 空でないファイルのみ
+                        reports.append({
+                            'date': date_str,
+                            'content': content
+                        })
+                        
+                except Exception as e:
+                    print(f"Error reading {file_path}: {e}")
+        else:
+            print(f"Memory directory not found: {memory_dir}")
+            
+    except Exception as e:
+        print(f"Error updating daily reports: {e}")
+    
+    output_path = os.path.join(CONFIG['OUTPUT_DIR'], 'daily_reports.json')
+    with open(output_path, 'w', encoding='utf-8') as f:
+        json.dump(reports, f, ensure_ascii=False, indent=2)
+    
+    print(f"Saved {len(reports)} daily reports to {output_path}")
+    return reports
+
 def main():
     """メイン処理"""
     print("🤖 Clawdia Dashboard Data Updater")
@@ -251,12 +324,16 @@ def main():
         trades = update_trades_data()
         signals = update_signals_data()
         wallet = update_wallet_data()
+        tasks = update_tasks_data()
+        daily_reports = update_daily_reports_data()
         
         # サマリー作成
         summary = {
             'last_updated': datetime.now().isoformat(),
             'trades_count': len(trades),
             'signals_count': len(signals),
+            'tasks_count': len(tasks),
+            'daily_reports_count': len(daily_reports),
             'wallet_total_usd': wallet.get('total_usd', 0)
         }
         
@@ -266,6 +343,7 @@ def main():
         
         print(f"\n✅ Update completed successfully!")
         print(f"📊 {summary['trades_count']} trades, {summary['signals_count']} signals")
+        print(f"📋 {summary['tasks_count']} tasks, {summary['daily_reports_count']} daily reports")
         print(f"💰 Portfolio: ${summary['wallet_total_usd']:.2f}")
         
     except Exception as e:
