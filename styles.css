@@ -350,5 +350,45 @@ header h1 {
     font-size: 0.85em;
 }
 .strategy-params .param span:first-child { color: var(--text-secondary, #999); }
+.strategy-stats {
+    margin-top: 8px;
+    background: rgba(46, 204, 113, 0.08);
+    border-radius: 8px;
+    padding: 8px;
+    border-left: 3px solid #2ecc71;
+}
+.strategy-stats .stats-header {
+    font-weight: bold;
+    font-size: 0.85em;
+    margin-bottom: 4px;
+    color: #2ecc71;
+}
+.strategy-stats .param {
+    display: flex;
+    justify-content: space-between;
+    padding: 2px 0;
+    font-size: 0.85em;
+}
+.strategy-stats .param span:first-child { color: var(--text-secondary, #999); }
+.strategy-position {
+    margin-top: 8px;
+    background: rgba(52, 152, 219, 0.08);
+    border-radius: 8px;
+    padding: 8px;
+    border-left: 3px solid #3498db;
+}
+.strategy-position .stats-header {
+    font-weight: bold;
+    font-size: 0.85em;
+    margin-bottom: 4px;
+    color: #3498db;
+}
+.strategy-position .param {
+    display: flex;
+    justify-content: space-between;
+    padding: 2px 0;
+    font-size: 0.85em;
+}
+.strategy-position .param span:first-child { color: var(--text-secondary, #999); }
 .subtitle { color: var(--text-secondary, #888); margin-top: -8px; font-size: 0.9em; }
 

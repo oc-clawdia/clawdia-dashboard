@@ -685,6 +685,43 @@ function updateStrategiesSection() {
             html += `<div class="param"><span>RSI Exit</span><span>${p.rsi_period} > ${p.rsi_exit}</span></div>`;
             html += `<div class="param"><span>SL</span><span>${p.sl_pct}%</span></div>`;
             html += `</div>`;
+        } else if (s.strategy === 'GRID') {
+            html += `<div class="strategy-params">`;
+            html += `<div class="param"><span>グリッド間隔</span><span>${p.grid_spacing_pct}%</span></div>`;
+            html += `<div class="param"><span>TP</span><span>${p.tp_pct}%</span></div>`;
+            html += `<div class="param"><span>SL</span><span>${p.sl_pct}%</span></div>`;
+            html += `<div class="param"><span>予算/回</span><span>$${p.budget}</span></div>`;
+            html += `<div class="param"><span>取引所</span><span>${p.exchange || 'Jupiter'}</span></div>`;
+            html += `</div>`;
+        }
+        
+        // Stats section
+        const stats = s.stats || {};
+        if (stats.total_trades !== undefined) {
+            html += `<div class="strategy-stats">`;
+            html += `<div class="stats-header">📈 成績</div>`;
+            html += `<div class="param"><span>総トレード</span><span>${stats.total_trades}</span></div>`;
+            if (stats.win_rate !== undefined) {
+                html += `<div class="param"><span>勝率</span><span>${stats.win_rate}%</span></div>`;
+            }
+            if (stats.tp_exits !== undefined) {
+                html += `<div class="param"><span>TP/SL</span><span>${stats.tp_exits} / ${stats.sl_exits}</span></div>`;
+            }
+            html += `</div>`;
+        }
+        
+        // Position section
+        if (s.position) {
+            html += `<div class="strategy-position">`;
+            html += `<div class="stats-header">💼 ポジション</div>`;
+            if (s.position.entry_time) {
+                const t = new Date(s.position.entry_time);
+                html += `<div class="param"><span>エントリー</span><span>${t.toLocaleString('ja-JP')}</span></div>`;
+            }
+            if (s.position.usdc_spent) {
+                html += `<div class="param"><span>投入額</span><span>$${s.position.usdc_spent}</span></div>`;
+            }
+            html += `</div>`;
         }
         
         html += `</div></div>`;

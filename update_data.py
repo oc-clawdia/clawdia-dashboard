@@ -430,6 +430,94 @@ def update_portfolio_strategies():
     except Exception as e:
         print(f"  Error reading live_trader.py: {e}")
     
+    # Add Jupiter Grid Bot info
+    try:
+        import subprocess
+        grid_running = 'jupiter_grid' in subprocess.run(
+            ['ps', 'aux'], capture_output=True, text=True).stdout
+        
+        if grid_running or os.path.exists('/tmp/jupiter_grid.pid'):
+            grid_strat = {
+                "pair_id": "SOL_GRID",
+                "strategy": "GRID",
+                "enabled": grid_running,
+                "trade_symbol": "SOL",
+                "params": {
+                    "grid_spacing_pct": 1.5,
+                    "tp_pct": 1.5,
+                    "sl_pct": 1.5,
+                    "budget": 20.0,
+                    "exchange": "Jupiter (Solana)",
+                },
+                "bot_type": "jupiter_grid",
+            }
+            
+            # Read grid trade log for stats
+            grid_trades = []
+            grid_log_pattern = os.path.join(CONFIG['BOT_DATA_DIR'], 'trades', 'jgrid_*.jsonl')
+            for f in sorted(glob.glob(grid_log_pattern)):
+                with open(f) as fh:
+                    for line in fh:
+                        try:
+                            grid_trades.append(json.loads(line.strip()))
+                        except:
+                            pass
+            
+            buys = [t for t in grid_trades if t.get('action') == 'buy']
+            sells_tp = [t for t in grid_trades if t.get('action') == 'sell_tp']
+            sells_sl = [t for t in grid_trades if t.get('action') == 'sell_sl']
+            
+            grid_strat["stats"] = {
+                "total_trades": len(buys) + len(sells_tp) + len(sells_sl),
+                "buys": len(buys),
+                "tp_exits": len(sells_tp),
+                "sl_exits": len(sells_sl),
+                "win_rate": round(len(sells_tp) / max(len(sells_tp) + len(sells_sl), 1) * 100, 1),
+            }
+            
+            # Check if currently holding position (pid file + recent buy without sell)
+            if buys and len(buys) > len(sells_tp) + len(sells_sl):
+                last_buy = buys[-1]
+                grid_strat["position"] = {
+                    "entry_time": last_buy.get('timestamp', ''),
+                    "usdc_spent": last_buy.get('usdc_spent', 0),
+                }
+            
+            strategies.append(grid_strat)
+    except Exception as e:
+        print(f"  Error reading grid bot info: {e}")
+    
+    # Add positions info from live_trader signal logs
+    try:
+        # Read recent signal logs for CCI positions
+        signal_pattern = os.path.join(CONFIG['BOT_DATA_DIR'], 'signal_logs', 'signals_*.jsonl')
+        signal_files = sorted(glob.glob(signal_pattern))
+        
+        # Read trade logs for position tracking
+        trade_pattern = os.path.join(CONFIG['BOT_DATA_DIR'], 'trades', 'trades_*.jsonl')
+        trade_files = sorted(glob.glob(trade_pattern))
+        all_trades = []
+        for f in trade_files[-7:]:  # Last 7 days
+            with open(f) as fh:
+                for line in fh:
+                    try:
+                        all_trades.append(json.loads(line.strip()))
+                    except:
+                        pass
+        
+        # Calculate per-strategy stats
+        for strat in strategies:
+            if strat.get('strategy') == 'CCI':
+                symbol = strat.get('trade_symbol', '')
+                strat_trades = [t for t in all_trades if symbol.upper() in str(t.get('output_token', '')).upper() 
+                               or symbol.upper() in str(t.get('input_token', '')).upper()]
+                strat["stats"] = {
+                    "total_trades": len(strat_trades),
+                    "last_7d_trades": len(strat_trades),
+                }
+    except Exception as e:
+        print(f"  Error reading position data: {e}")
+    
     output_path = os.path.join(CONFIG['OUTPUT_DIR'], 'strategies.json')
     with open(output_path, 'w', encoding='utf-8') as f:
         json.dump(strategies, f, ensure_ascii=False, indent=2)

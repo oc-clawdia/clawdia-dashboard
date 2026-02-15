@@ -10,6 +10,10 @@
       "sl_pct": 0.9,
       "donchian_period": 15,
       "ema_trend_period": 50
+    },
+    "stats": {
+      "total_trades": 1,
+      "last_7d_trades": 1
     }
   },
   {
@@ -23,6 +27,10 @@
       "sl_pct": 1.5,
       "donchian_period": 20,
       "ema_trend_period": 0
+    },
+    "stats": {
+      "total_trades": 0,
+      "last_7d_trades": 0
     }
   },
   {
@@ -38,6 +46,27 @@
       "rsi_period": 10,
       "rsi_exit": 75,
       "sl_pct": 3.0
+    }
+  },
+  {
+    "pair_id": "SOL_GRID",
+    "strategy": "GRID",
+    "enabled": true,
+    "trade_symbol": "SOL",
+    "params": {
+      "grid_spacing_pct": 1.5,
+      "tp_pct": 1.5,
+      "sl_pct": 1.5,
+      "budget": 20.0,
+      "exchange": "Jupiter (Solana)"
+    },
+    "bot_type": "jupiter_grid",
+    "stats": {
+      "total_trades": 0,
+      "buys": 0,
+      "tp_exits": 0,
+      "sl_exits": 0,
+      "win_rate": 0.0
     }
   }
 ]

@@ -792,14 +792,31 @@
           "assignee": "clawdia",
           "priority": "medium",
           "status": "pending"
+        },
+        {
+          "id": "P004-T004",
+          "title": "Binance Futures アカウント開設 + API発行",
+          "assignee": "hikarimaru",
+          "status": "pending",
+          "priority": "high",
+          "notes": "本人確認(KYC)完了後、API管理画面でキー発行。Futures取引権限ON、出金権限OFF。"
+        },
+        {
+          "id": "P004-T005",
+          "title": "Jupiter/Solanaでのグリッド風戦略実装",
+          "assignee": "clawdia",
+          "status": "in_progress",
+          "priority": "high",
+          "started_at": "2026-02-15T17:30:00+09:00",
+          "notes": "Binance開設待ちの間、Jupiterで実行可能な高頻度戦略を実装。ロングオンリー制約あり。"
         }
       ]
     }
   ],
   "statistics": {
-    "total_tasks": 60,
+    "total_tasks": 62,
     "completed_tasks": 20,
-    "overall_progress": 33.3,
+    "overall_progress": 32.3,
     "projects": [
       {
         "id": "P001",
@@ -825,7 +842,7 @@
       {
         "id": "P004",
         "name": "短期高頻度取引Bot",
-        "total_tasks": 9,
+        "total_tasks": 11,
         "completed_tasks": 0,
         "progress_percentage": 0.0
       }
