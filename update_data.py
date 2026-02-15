@@ -240,27 +240,79 @@ def update_wallet_data():
     return wallet_data
 
 def update_tasks_data():
-    """タスクデータを更新"""
+    """タスクデータを更新（プロジェクト階層構造対応）"""
     print("Updating tasks data...")
     
     tasks_file = '../tasks.json'  # ワークスペースルートのtasks.json
     
-    tasks = []
+    tasks_data = {"members": {}, "projects": []}
     try:
         if os.path.exists(tasks_file):
             with open(tasks_file, 'r', encoding='utf-8') as f:
-                tasks = json.load(f)
+                tasks_data = json.load(f)
         else:
             print(f"Tasks file not found: {tasks_file}")
     except Exception as e:
         print(f"Error reading tasks file: {e}")
+        return tasks_data
+    
+    # 統計計算
+    def count_tasks_recursive(tasks):
+        """再帰的にタスク数をカウント"""
+        total = 0
+        completed = 0
+        
+        for task in tasks:
+            total += 1
+            if task.get('status') == 'completed':
+                completed += 1
+            
+            # サブタスクがあれば再帰的にカウント
+            if 'subtasks' in task and task['subtasks']:
+                sub_total, sub_completed = count_tasks_recursive(task['subtasks'])
+                total += sub_total
+                completed += sub_completed
+        
+        return total, completed
+    
+    # プロジェクト別統計計算
+    project_stats = []
+    total_all_tasks = 0
+    completed_all_tasks = 0
+    
+    for project in tasks_data.get('projects', []):
+        project_tasks = project.get('tasks', [])
+        total_tasks, completed_tasks = count_tasks_recursive(project_tasks)
+        
+        progress_percentage = 0
+        if total_tasks > 0:
+            progress_percentage = round((completed_tasks / total_tasks) * 100, 1)
+        
+        project_stats.append({
+            'id': project['id'],
+            'name': project['name'],
+            'total_tasks': total_tasks,
+            'completed_tasks': completed_tasks,
+            'progress_percentage': progress_percentage
+        })
+        
+        total_all_tasks += total_tasks
+        completed_all_tasks += completed_tasks
+    
+    # 統計情報を追加
+    tasks_data['statistics'] = {
+        'total_tasks': total_all_tasks,
+        'completed_tasks': completed_all_tasks,
+        'overall_progress': round((completed_all_tasks / total_all_tasks * 100), 1) if total_all_tasks > 0 else 0,
+        'projects': project_stats
+    }
     
     output_path = os.path.join(CONFIG['OUTPUT_DIR'], 'tasks.json')
     with open(output_path, 'w', encoding='utf-8') as f:
-        json.dump(tasks, f, ensure_ascii=False, indent=2)
+        json.dump(tasks_data, f, ensure_ascii=False, indent=2)
     
-    print(f"Saved {len(tasks)} tasks to {output_path}")
-    return tasks
+    print(f"Saved {len(tasks_data.get('projects', []))} projects with {total_all_tasks} total tasks to {output_path}")
+    return tasks_data
 
 def update_daily_reports_data():
     """日報データを更新"""

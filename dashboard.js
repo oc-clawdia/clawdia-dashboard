@@ -162,13 +162,16 @@ async function loadSignalsData() {
 
 async function loadTasksData() {
     try {
-        const response = await fetch('../tasks.json');
+        const response = await fetch('./data/tasks.json');
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
         dashboardData.tasks = await response.json();
-        console.log(`✅ ${dashboardData.tasks.length} tasks loaded`);
+        
+        const projectCount = dashboardData.tasks.projects ? dashboardData.tasks.projects.length : 0;
+        const totalTasks = dashboardData.tasks.statistics ? dashboardData.tasks.statistics.total_tasks : 0;
+        console.log(`✅ ${projectCount} projects with ${totalTasks} total tasks loaded`);
     } catch (error) {
         console.error('Failed to load tasks data:', error);
-        dashboardData.tasks = [];
+        dashboardData.tasks = {members: {}, projects: [], statistics: {total_tasks: 0, completed_tasks: 0}};
     }
 }
 
@@ -265,7 +268,7 @@ function updateSignalStatus() {
 
 // Tasks Section Update with Enhanced Features
 function updateTasksSection() {
-    if (dashboardData.tasks.length === 0) {
+    if (!dashboardData.tasks.projects || dashboardData.tasks.projects.length === 0) {
         document.getElementById('tasks-container').innerHTML = '<div class="loading">タスクデータがありません</div>';
         return;
     }
@@ -273,8 +276,8 @@ function updateTasksSection() {
     // Update task statistics
     updateTaskStatistics();
     
-    // Render task list
-    renderTaskList();
+    // Render project accordion with tasks
+    renderProjectAccordion();
 }
 
 function updateTaskStatistics() {

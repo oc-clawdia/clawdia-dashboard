@@ -1212,5 +1212,17 @@
     "entry_condition_met": false,
     "sl_triggered": false,
     "donchian_triggered": false
+  },
+  {
+    "checked_at": "2026-02-15T12:00:34.311029+09:00",
+    "pair": "BNBUSDT",
+    "price": 630.8,
+    "cci": -19.764422731050967,
+    "donchian_low": 627.0,
+    "in_position": false,
+    "action": "NONE",
+    "entry_condition_met": false,
+    "sl_triggered": false,
+    "donchian_triggered": false
   }
 ]

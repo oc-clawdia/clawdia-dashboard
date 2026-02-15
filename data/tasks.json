@@ -443,5 +443,33 @@
         }
       ]
     }
-  ]
+  ],
+  "statistics": {
+    "total_tasks": 27,
+    "completed_tasks": 3,
+    "overall_progress": 11.1,
+    "projects": [
+      {
+        "id": "P001",
+        "name": "CCI自動売買Bot",
+        "total_tasks": 13,
+        "completed_tasks": 0,
+        "progress_percentage": 0.0
+      },
+      {
+        "id": "P002",
+        "name": "ミームコイン探索",
+        "total_tasks": 4,
+        "completed_tasks": 0,
+        "progress_percentage": 0.0
+      },
+      {
+        "id": "P003",
+        "name": "インフラ・ツール",
+        "total_tasks": 10,
+        "completed_tasks": 3,
+        "progress_percentage": 30.0
+      }
+    ]
+  }
 }
