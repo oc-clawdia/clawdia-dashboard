@@ -92,31 +92,36 @@ function handleHashChange() {
 async function loadAllData() {
     updateStatusIndicator('loading', 'データ読み込み中...');
     
-    try {
-        // Load all data sources
-        await Promise.all([
-            loadWalletData(),
-            loadTradesData(),
-            loadSignalsData(),
-            loadTasksData(),
-            loadDailyReportsData()
-        ]);
-        
-        // Update UI with loaded data
-        updatePortfolioSection();
-        updateTasksSection();
-        updateDailyReportsSection();
-        updatePnLSummary();
-        applyFilters();
-        updateSignalStatus();
-        setupSignalChart();
-        
+    let loadErrors = 0;
+    
+    // Load all data sources (each independently)
+    await Promise.all([
+        loadWalletData().catch(e => { console.warn('Wallet load failed:', e); loadErrors++; }),
+        loadTradesData().catch(e => { console.warn('Trades load failed:', e); loadErrors++; }),
+        loadSignalsData().catch(e => { console.warn('Signals load failed:', e); loadErrors++; }),
+        loadTasksData().catch(e => { console.warn('Tasks load failed:', e); loadErrors++; }),
+        loadDailyReportsData().catch(e => { console.warn('Reports load failed:', e); loadErrors++; })
+    ]);
+    
+    // Update UI sections (each independently)
+    const sections = [
+        () => updatePortfolioSection(),
+        () => updateTasksSection(),
+        () => updateDailyReportsSection(),
+        () => updatePnLSummary(),
+        () => applyFilters(),
+        () => updateSignalStatus(),
+        () => setupSignalChart()
+    ];
+    
+    for (const fn of sections) {
+        try { fn(); } catch (e) { console.warn('Section update failed:', e); loadErrors++; }
+    }
+    
+    if (loadErrors === 0) {
         updateStatusIndicator('online', '接続中');
-        
-    } catch (error) {
-        console.error('Data loading error:', error);
-        updateStatusIndicator('offline', 'データ読み込みエラー');
-        showError('trade-table-body', 'データの読み込みに失敗しました');
+    } else {
+        updateStatusIndicator('online', `接続中 (${loadErrors}件の警告)`);
     }
 }
 
